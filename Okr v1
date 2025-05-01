@@ -1,0 +1,142 @@
+local Library = loadstring(Game:HttpGet("https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/wizard"))()
+
+local PhantomForcesWindow = Library:NewWindow("Neon.C Hub X")
+local KillingCheats = PhantomForcesWindow:NewSection("🎯 Combat")
+
+KillingCheats:CreateButton("Auto Parry X", function()
+    local Player = game:GetService("Players").LocalPlayer
+    local Balls = workspace:WaitForChild("Balls")
+    local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+
+    -- ตรวจสอบว่าเป็นบอลที่ถูกต้อง
+    local function VerifyBall(Ball)
+        return Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true
+    end
+
+    -- ตรวจสอบว่าเราคือเป้าหมาย
+    local function IsTarget() 
+        return Player.Character and Player.Character:FindFirstChild("Highlight")
+    end
+
+    -- ส่งคำสั่ง Parry
+    local function Parry()
+        Remotes:WaitForChild("ParryButtonPress"):Fire()
+    end
+
+    -- ฟังก์ชันหลักที่ใช้ในการตรวจจับบอล
+    Balls.ChildAdded:Connect(function(Ball)
+        if not VerifyBall(Ball) then return end
+        
+        local OldPosition = Ball.Position
+        local OldTick = tick()
+
+        Ball:GetPropertyChangedSignal("Position"):Connect(function()
+            if IsTarget() then
+                local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
+                local Velocity = (Ball.Position - OldPosition).Magnitude / (tick() - OldTick) -- คำนวณความเร็ว
+
+                local TimeToImpact = Distance / Velocity
+                if TimeToImpact <= 1.5 then -- ลดเวลาให้เร็วขึ้น
+                    Parry()
+                end
+                
+                -- อัปเดตตำแหน่งบอล
+                OldPosition = Ball.Position
+                OldTick = tick()
+            end
+        end)
+    end)
+end)
+
+KillingCheats:CreateButton("Auto Win X", function()
+    getgenv().god = true
+    while getgenv().god and task.wait() do
+        for _, ball in pairs(workspace.Balls:GetChildren()) do
+            if ball then
+                local HumanoidRootPart = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if HumanoidRootPart then
+                    game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPart.Position, ball.Position)
+                    if game:GetService("Players").LocalPlayer.Character:FindFirstChild("Highlight") then
+                        game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame = ball.CFrame * CFrame.new(0, 0, ball.Velocity.Magnitude * -0.5)
+                        game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+KillingCheats:CreateButton("Auto Detect Spam X", function()
+    getgenv().AutoDetectSpam = true
+    local Balls = workspace:WaitForChild("Balls")
+    local Alive = workspace:WaitForChild("Alive")
+
+    local function get_ProxyPlayer()
+        local Player = game:GetService("Players").LocalPlayer
+        local PlayerRP = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+        local NearestPlayer = nil
+        local Distance = math.huge
+        
+        for _, plr in pairs(Alive:GetChildren()) do
+            if plr:FindFirstChild("Humanoid") and plr.Humanoid.Health > 50 and plr.Name ~= Player.Name then
+                if plr:FindFirstChild("HumanoidRootPart") then
+                    local mag = (plr.HumanoidRootPart.Position - PlayerRP.Position).Magnitude
+                    if mag < Distance then
+                        Distance = mag
+                        NearestPlayer = plr
+                    end
+                end
+            end
+        end
+        return NearestPlayer
+    end
+
+    local function SuperClick()
+        if #Alive:GetChildren() > 1 then
+            game:GetService("ReplicatedStorage").Remotes.ParryAttempt:FireServer(0.5, CFrame.new(), {["enzo"] = Vector3.new()}, {500, 500})
+        end
+    end
+
+    task.spawn(function()
+        while task.wait() do
+            if getgenv().SpamClickA and getgenv().AutoDetectSpam then
+                SuperClick()
+            end
+        end
+    end)
+
+    local function GetBall(ball)
+        ball:GetPropertyChangedSignal("Position"):Connect(function()
+            local PlayerPP = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character.PrimaryPart
+            local NearestPlayer = get_ProxyPlayer()
+
+            if ball and PlayerPP and NearestPlayer then
+                local PlayerDistance = (PlayerPP.Position - NearestPlayer.PrimaryPart.Position).Magnitude
+                local BallDistance = (PlayerPP.Position - ball.Position).Magnitude
+
+                if PlayerDistance < 55 and BallDistance < 45 then
+                    getgenv().SpamClickA = true
+                else
+                    getgenv().SpamClickA = false
+                end
+            end
+        end)
+    end
+
+    for _, ball in pairs(Balls:GetChildren()) do
+        if ball and ball:GetAttribute("realBall") then
+            GetBall(ball)
+        end
+    end
+
+    Balls.ChildAdded:Connect(function(ball)
+        if ball and ball:GetAttribute("realBall") then
+            getgenv().SpamClickA = false
+            GetBall(ball)
+        end
+    end)
+end)
+
+KillingCheats:CreateButton("Made by Neoncat", function()
+    print("SuckMyD")
+end)
